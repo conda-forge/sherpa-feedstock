@@ -17,7 +17,7 @@ source:
 build:
   # FIXME: Get macOS builds working
   skip: true  # [not linux]
-  number: 1
+  number: 2
 
 requirements:
   build:
@@ -64,7 +64,7 @@ test:
 
     - Sherpa --help
     - cd Examples/CI/LO_Z
-    - Sherpa
+    - Sherpa  # [build_platform == target_platform]
 
 about:
   home: https://gitlab.com/sherpa-team/sherpa
