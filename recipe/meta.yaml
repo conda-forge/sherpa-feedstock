@@ -64,7 +64,7 @@ test:
 
     - Sherpa --help
     - cd Examples/CI/LO_Z
-    - Sherpa
+    - Sherpa  # [build_platform == target_platform]
 
 about:
   home: https://gitlab.com/sherpa-team/sherpa
