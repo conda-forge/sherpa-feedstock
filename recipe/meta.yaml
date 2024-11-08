@@ -1,5 +1,5 @@
 {% set name = "sherpa" %}
-{% set version = "2.2.16" %}
+{% set version = "3.0.1" %}
 
 package:
   name: {{ name }}
@@ -7,7 +7,7 @@ package:
 
 source:
   url: https://gitlab.com/sherpa-team/sherpa/-/archive/v{{ version }}/sherpa-v{{ version }}.tar.gz
-  sha256: b2680da5682c78623635ae88a5ff5af346cf74c1be95ee9177e8f9080d418e76
+  sha256: ff5f43e79a9a10919391242307a771eca0c57b0462c11bfb99ee4a0fe8c48c58
   patches:
     # Avoid issue with compiling .pyc files during packaging step post build
     - 0001-convert-print-statements-using-2to3.patch
@@ -17,7 +17,7 @@ source:
 build:
   # FIXME: Get macOS builds working
   skip: true  # [not linux]
-  number: 2
+  number: 0
 
 requirements:
   build:
