@@ -51,12 +51,12 @@ test:
     - Examples
   commands:
     - test -f $PREFIX/bin/Sherpa
-    - test -f $PREFIX/bin/sconsloops
+    - test -f $PREFIX/bin/sconsloops  # FIXME: Broken (from MadLoop addon)
     - test -f $PREFIX/bin/get_bibtex
     - test -f $PREFIX/bin/Sherpa-config
     - test -f $PREFIX/bin/init_nlo.sh
     - test -f $PREFIX/bin/plot_graphs.sh
-    - test -f $PREFIX/bin/make2scons
+    - test -f $PREFIX/bin/make2scons  # FIXME: Has conda-forge build paths baked in
     - test -f $PREFIX/bin/plot_stats.sh
 
     - test -f $PREFIX/lib/SHERPA-MC/libPhasicProcess.so.0  # [linux]
