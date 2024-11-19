@@ -87,7 +87,7 @@ test:
     - test -f $PREFIX/lib/SHERPA-MC/libModelUFO.so.0  # [linux]
     - test -f $PREFIX/lib/SHERPA-MC/libExtraXSCluster.so.0  # [linux]
     - test -f $PREFIX/lib/SHERPA-MC/libMEToolsLoops.so.0  # [linux]
-    - test -f $PREFIX/lib/SHERPA-MC/libBeam.so.0 -  # [linux]
+    - test -f $PREFIX/lib/SHERPA-MC/libBeam.so.0  # [linux]
     - test -f $PREFIX/lib/SHERPA-MC/libAhadicFormation.so.0  # [linux]
     - test -f $PREFIX/lib/SHERPA-MC/libSherpaPythia.so.0  # [linux]
     - test -f $PREFIX/lib/SHERPA-MC/libHadronsCurrents.so.0  # [linux]
