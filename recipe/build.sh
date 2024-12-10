@@ -22,6 +22,7 @@ autoreconf --install
     --enable-hepmc2=$PREFIX \
     --enable-lhapdf=$PREFIX \
     --with-sqlite3=$PREFIX \
+    --without-python \
     CXX="$CXX" \
     CXXFLAGS="$CXXFLAGS" \
     LDFLAGS="$LDFLAGS" \
