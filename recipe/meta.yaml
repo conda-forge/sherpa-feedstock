@@ -47,7 +47,7 @@ test:
     - lhapdf
     - hepmc2
   source_files:
-    - Examples
+    - Examples/CI/LO_Z/
   commands:
     - test -f $PREFIX/bin/Sherpa
     - test -f $PREFIX/bin/sconsloops  # FIXME: Broken (from MadLoop addon)
