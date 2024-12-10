@@ -15,9 +15,8 @@ source:
     - 0002-remove-null-characters-for-prefix-replacement.patch
 
 build:
-  # FIXME: Get macOS builds working
-  skip: true  # [not linux]
-  number: 3
+  skip: true  # [win]
+  number: 4
 
 requirements:
   build:
