@@ -15,9 +15,8 @@ source:
     - 0002-remove-null-characters-for-prefix-replacement.patch
 
 build:
-  # FIXME: Get macOS builds working
-  skip: true  # [not linux]
-  number: 3
+  skip: true  # [win]
+  number: 4
 
 requirements:
   build:
@@ -48,7 +47,7 @@ test:
     - lhapdf
     - hepmc2
   source_files:
-    - Examples
+    - Examples/CI/LO_Z/
   commands:
     - test -f $PREFIX/bin/Sherpa
     - test -f $PREFIX/bin/sconsloops  # FIXME: Broken (from MadLoop addon)
