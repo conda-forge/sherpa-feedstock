@@ -32,6 +32,8 @@ requirements:
     - sed  # needed only to patch LDFLAGS
     - diffutils
     - texinfo  # can't skip build of manual
+    - python  # [build_platform != target_platform]
+    - cross-python_{{ target_platform }}  # [build_platform != target_platform]
   host:
     - sqlite
     - lhapdf
