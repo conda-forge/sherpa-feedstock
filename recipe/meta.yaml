@@ -15,9 +15,8 @@ source:
     - 0002-remove-null-characters-for-prefix-replacement.patch
 
 build:
-  # FIXME: Get macOS builds working
-  skip: true  # [not linux]
-  number: 3
+  skip: true  # [win]
+  number: 4
 
 requirements:
   build:
@@ -33,6 +32,8 @@ requirements:
     - sed  # needed only to patch LDFLAGS
     - diffutils
     - texinfo  # can't skip build of manual
+    - python  # [build_platform != target_platform]
+    - cross-python_{{ target_platform }}  # [build_platform != target_platform]
   host:
     - sqlite
     - lhapdf
@@ -48,7 +49,7 @@ test:
     - lhapdf
     - hepmc2
   source_files:
-    - Examples
+    - Examples/CI/LO_Z/
   commands:
     - test -f $PREFIX/bin/Sherpa
     - test -f $PREFIX/bin/sconsloops  # FIXME: Broken (from MadLoop addon)
