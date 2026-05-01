@@ -1,0 +1,129 @@
+schema_version: 1
+
+context:
+  version: "2.2.16"
+
+package:
+  name: sherpa
+  version: ${{ version }}
+
+source:
+  url: https://gitlab.com/sherpa-team/sherpa/-/archive/v${{ version }}/sherpa-v${{ version }}.tar.gz
+  sha256: b2680da5682c78623635ae88a5ff5af346cf74c1be95ee9177e8f9080d418e76
+  patches:
+    # Avoid issue with compiling .pyc files during packaging step post build
+    - 0001-convert-print-statements-using-2to3.patch
+    # Avoid issue with null characters in the prefix replacement
+    - 0002-remove-null-characters-for-prefix-replacement.patch
+
+build:
+  # FIXME: Get macOS builds working
+  number: 4
+  skip: not linux
+
+requirements:
+  build:
+    - ${{ stdlib("c") }}
+    - ${{ compiler("cxx") }}
+    - ${{ compiler("fortran") }}
+    - if: unix
+      then: gnuconfig
+    - autoconf
+    - libtool
+    - make
+    - automake
+    - which
+    - sed  # needed only to patch LDFLAGS
+    - diffutils
+    - texinfo  # can't skip build of manual
+  host:
+    - sqlite
+    - lhapdf
+    - hepmc2
+  # note https://conda-forge.org/docs/maintainer/knowledge_base/#compilers
+  # so don't add compilers to run or test requirements
+  run:
+    - lhapdf
+    - hepmc2
+
+tests:
+  - package_contents:
+      strict: true
+      bin:
+        - Sherpa
+        # FIXME: Broken (from MadLoop addon)
+        - sconsloops
+        - get_bibtex
+        - Sherpa-config
+        - init_nlo.sh
+        - plot_graphs.sh
+        # FIXME: Has conda-forge build paths baked in
+        - make2scons
+        - plot_stats.sh
+      lib:
+        - SHERPA-MC/*
+      include:
+        - SHERPA-MC/AHADIC++/*
+        - SHERPA-MC/AMEGIC++/*
+        - SHERPA-MC/AMISIC++/*
+        - SHERPA-MC/ATOOLS/*
+        - SHERPA-MC/AddOns/*
+        - SHERPA-MC/BEAM/*
+        - SHERPA-MC/COMIX/*
+        - SHERPA-MC/CSSHOWER++/*
+        - SHERPA-MC/DIRE/*
+        - SHERPA-MC/EXTRA_XS/*
+        - SHERPA-MC/HADRONS++/*
+        - SHERPA-MC/MCATNLO/*
+        - SHERPA-MC/METOOLS/*
+        - SHERPA-MC/MODEL/*
+        - SHERPA-MC/PDF/*
+        - SHERPA-MC/PHASIC++/*
+        - SHERPA-MC/PHOTONS++/*
+        - SHERPA-MC/SHERPA/*
+        - SHERPA-MC/SHRiMPS/*
+      files:
+        - share/SHERPA-MC/*
+        - share/doc/SHERPA-MC/Sherpa.html
+        - share/doc/SHERPA-MC/SherpaLogo.jpg
+        - share/info/Sherpa.info*
+        - share/man/man1/Sherpa.1
+        - etc/conda/test-files/sherpa/0/*
+
+  - files:
+      source:
+        - Examples
+    script:
+      - Sherpa-config
+      - Sherpa-config --version
+      - Sherpa-config --prefix
+      - Sherpa-config --incdir
+      - Sherpa-config --libs
+      - Sherpa-config --datadir
+      - Sherpa-config --ldflags
+      - Sherpa-config --cppflags
+      - Sherpa --help
+      - cd Examples/CI/LO_Z
+      - if: build_platform == target_platform
+        then: Sherpa
+
+about:
+  summary: A Monte Carlo event generator for the Simulation of High-Energy Reactions of PArticles
+  description: |
+    Sherpa is a Monte Carlo event generator for the Simulation of High-Energy
+    Reactions of PArticles in lepton-lepton, lepton-photon, photon-photon,
+    lepton-hadron and hadron-hadron collisions. Simulation programs - also
+    dubbed event generators - like Sherpa are indispensable work horses for
+    current particle physics phenomenology and are (at) the interface between
+    theory and experiment.
+  license: GPL-3.0-or-later
+  license_file: COPYING
+  homepage: https://gitlab.com/sherpa-team/sherpa
+  repository: https://gitlab.com/sherpa-team/sherpa
+  documentation: https://sherpa-team.gitlab.io/
+
+extra:
+  recipe-maintainers:
+    - chrisburr
+    - kratsg
+    - matthewfeickert
