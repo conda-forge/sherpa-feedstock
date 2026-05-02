@@ -15,6 +15,8 @@ source:
     - 0001-convert-print-statements-using-2to3.patch
     # Avoid issue with null characters in the prefix replacement
     - 0002-remove-null-characters-for-prefix-replacement.patch
+    # Fix stray 'R' before @end verbatim that modern texinfo rejects
+    - fix-stray-character-in-Manual-Starting-texi.patch
 
 build:
   # FIXME: Get macOS builds working
