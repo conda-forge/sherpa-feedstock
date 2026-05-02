@@ -28,6 +28,7 @@ requirements:
     - ${{ compiler("fortran") }}
     - if: unix
       then: gnuconfig
+    - pkg-config
     - autoconf
     - libtool
     - make

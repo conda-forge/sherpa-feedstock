@@ -1,4 +1,9 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+set -x
+
+# Get an updated config.sub and config.guess
+cp ${BUILD_PREFIX}/share/gnuconfig/config.* .
 
 # For Sherpa v2, remove specific linker flags from LDFLAGS to ensure all libraries
 # have symbols defined after the packaging step
@@ -27,8 +32,8 @@ autoreconf --install
     LDFLAGS="$LDFLAGS" \
     PYTHON=""
 
-make --jobs="${CPU_COUNT}"
-if [[ "${CONDA_BUILD_CROSS_COMPILATION:-}" != "1" || "${CROSSCOMPILING_EMULATOR}" != "" ]]; then
-    make check
+if [[ "${CONDA_BUILD_CROSS_COMPILATION:-}" != "1" || "${CROSSCOMPILING_EMULATOR:-}" != "" ]]; then
+  make check --jobs="${CPU_COUNT}"
 fi
+
 make install
