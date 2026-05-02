@@ -17,6 +17,11 @@ source:
     - 0002-remove-null-characters-for-prefix-replacement.patch
     # Fix stray 'R' before @end verbatim that modern texinfo rejects
     - fix-stray-character-in-Manual-Starting-texi.patch
+    # Use 'lhapdf-config --libs' so libLHAPDF.so is recorded as a required
+    # dependency (LHAPDF v6.5.6+ splits -L between --ldflags and the actual
+    # -l between --libs).
+    # c.f. https://github.com/conda-forge/lhapdf-feedstock/pull/31#issuecomment-4204460519
+    - link-libLHAPDF-when-enabled.patch
 
 build:
   # FIXME: Get macOS builds working
