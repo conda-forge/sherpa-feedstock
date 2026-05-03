@@ -22,6 +22,11 @@ source:
     # -l between --libs).
     # c.f. https://github.com/conda-forge/lhapdf-feedstock/pull/31#issuecomment-4204460519
     - link-libLHAPDF-when-enabled.patch
+    # Strip embedded NULs from paths in Library_Loader so that
+    # conda-relocated paths (which contain NUL padding) work with
+    # stat(2)/dlopen(3); otherwise loading libLHAPDFSherpa.so fails
+    # at runtime on aarch64 with 'cannot read file data: Is a directory'.
+    - strip-null-bytes-in-Library_Loader.patch
 
 build:
   # FIXME: Get macOS builds working
