@@ -70,7 +70,6 @@ tests:
         - Sherpa-config
         - init_nlo.sh
         - plot_graphs.sh
-        # FIXME: Has conda-forge build paths baked in
         - make2scons
         - plot_stats.sh
       lib:

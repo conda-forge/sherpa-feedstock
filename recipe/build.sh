@@ -37,3 +37,31 @@ if [[ "${CONDA_BUILD_CROSS_COMPILATION:-}" != "1" || "${CROSSCOMPILING_EMULATOR:
 fi
 
 make install
+
+# Sherpa's autoconf-generated wrapper scripts (Sherpa-config, make2scons,
+# Sherpa-generate-model, makelibs) bake the values of CXX, CC, FC,
+# CXXFLAGS, etc. directly into the installed files. Conda relocates the
+# host-prefix placeholder at install time, but the build-prefix paths
+# (cross-compiler binaries and -fdebug-prefix-map entries pointing at
+# the source tree) are not rewritten and would survive into the
+# packaged scripts as references to the now-gone build sandbox.
+# Replace the cross-compiler paths with their generic command names
+# and drop the build-only -fdebug-prefix-map flags so the scripts work
+# on a user's system after install.
+declare -a generated_scripts=(
+    "${PREFIX}/bin/Sherpa-config"
+    "${PREFIX}/bin/Sherpa-generate-model"
+    "${PREFIX}/bin/make2scons"
+    "${PREFIX}/share/SHERPA-MC/makelibs"
+)
+for script in "${generated_scripts[@]}"; do
+    [[ -f "${script}" ]] || continue
+    sed -i \
+        -e "s|${BUILD_PREFIX}/bin/${HOST}-c++|c++|g" \
+        -e "s|${BUILD_PREFIX}/bin/${HOST}-gcc|cc|g" \
+        -e "s|${BUILD_PREFIX}/bin/${HOST}-cc|cc|g" \
+        -e "s|${BUILD_PREFIX}/bin/${HOST}-gfortran|gfortran|g" \
+        -e "s| -Wl,--no-as-needed||g" \
+        -e "s| -fdebug-prefix-map=[^ '\"]*||g" \
+        "${script}"
+done
