@@ -36,10 +36,12 @@ source:
     - set-release-version-string.patch
 
 build:
-  number: 4
+  number: 5
   skip: win
 
 requirements:
+  run_exports:
+    - ${{ pin_subpackage("sherpa", upper_bound="x.x") }}
   build:
     - ${{ stdlib("c") }}
     - ${{ compiler("cxx") }}
