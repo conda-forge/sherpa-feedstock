@@ -27,6 +27,10 @@ source:
     # stat(2)/dlopen(3); otherwise loading libLHAPDFSherpa.so fails
     # at runtime on aarch64 with 'cannot read file data: Is a directory'.
     - strip-null-bytes-in-Library_Loader.patch
+    # Link Amegic's runtime-compiled process libs with $CXX, not bare 'gcc'.
+    - link-amegic-process-libs-with-cxx.patch
+    # Report a 'rel-<version>' branch so the dev-branch warning isn't shown.
+    - set-release-version-string.patch
 
 build:
   number: 4
@@ -52,11 +56,16 @@ requirements:
     - sqlite
     - lhapdf
     - hepmc2
-  # note https://conda-forge.org/docs/maintainer/knowledge_base/#compilers
-  # so don't add compilers to run or test requirements
+  # Amegic compiles process libraries at runtime ('makelibs'), so users need
+  # SCons + a C++ compiler (intentionally overrides no-compilers-in-run).
   run:
     - lhapdf
     - hepmc2
+    - scons
+    - if: osx
+      then: clangxx
+    - if: linux
+      then: gxx
 
 tests:
   - package_contents:
@@ -100,6 +109,7 @@ tests:
         - share/info/Sherpa.info*
         - share/man/man1/Sherpa.1
         - etc/conda/test-files/sherpa/0/*
+        - etc/conda/test-files/sherpa/1/*
 
   - files:
       source:
@@ -113,10 +123,27 @@ tests:
       - Sherpa-config --datadir
       - Sherpa-config --ldflags
       - Sherpa-config --cppflags
+      - Sherpa-config --cxx
+      # baked compiler must be generic (clang++/g++), not the build triplet,
+      # and the triplet must not survive anywhere in the generated wrappers
+      - 'case "$(Sherpa-config --cxx)" in *-apple-darwin* | *conda-linux-gnu*) exit 1 ;; esac'
+      - '! grep -E "(apple-darwin[0-9.]+|conda-linux-gnu)-(clang|gcc|c\+\+|g\+\+|gfortran)" "${PREFIX}/bin/make2scons" "${PREFIX}/bin/Sherpa-config" "${PREFIX}/share/SHERPA-MC/makelibs"'
       - Sherpa --help
       - cd Examples/CI/LO_Z
       - if: build_platform == target_platform
         then: Sherpa
+
+  # Exercise the Amegic runtime-compilation path (LO, no loop provider needed).
+  - files:
+      recipe:
+        - tests/amegic_compile/Run.dat
+    script:
+      - cd tests/amegic_compile
+      - Sherpa || true             # pass 1: write process source (exits non-zero by design)
+      - ./makelibs -j2             # compile
+      - Sherpa > pass2.log 2>&1    # pass 2: run with compiled libs
+      - 'grep -q "Generated events: 100" pass2.log'
+      - 'grep -q "Total XS" pass2.log'
 
 about:
   summary: A Monte Carlo event generator for the Simulation of High-Energy Reactions of PArticles

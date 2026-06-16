@@ -1,0 +1,12 @@
+diff --git a/AMEGIC++/Main/make2scons.in b/AMEGIC++/Main/make2scons.in
+index c259b602a..8661735ff 100755
+--- a/AMEGIC++/Main/make2scons.in
++++ b/AMEGIC++/Main/make2scons.in
+@@ -29,6 +29,7 @@ vars.Add('CXX','The C++ Compiler','@CXX@')
+ vars.Add('CXXFLAGS','The C++ Flags',['@AM_CXXFLAGS@'.split(" "),'@CXXFLAGS@'.split(" "),'-g0','-O2'])
+ vars.Add(PathVariable('incdir','include path','@INCLUDEDIR@',PathVariable.PathIsDir))
+ env = Environment(variables=vars,CPPPATH=['\${incdir}'],ENV=os.environ)
++env.Replace(SHLINK='\$CXX')
+ if env['PLATFORM']=='darwin':
+    env.Append( LINKFLAGS='-Wl,-undefined -Wl,dynamic_lookup' )
+ " > SConstruct;

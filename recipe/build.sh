@@ -38,16 +38,10 @@ fi
 
 make install
 
-# Sherpa's autoconf-generated wrapper scripts (Sherpa-config, make2scons,
-# Sherpa-generate-model, makelibs) bake the values of CXX, CC, FC,
-# CXXFLAGS, etc. directly into the installed files. Conda relocates the
-# host-prefix placeholder at install time, but the build-prefix paths
-# (cross-compiler binaries and -fdebug-prefix-map entries pointing at
-# the source tree) are not rewritten and would survive into the
-# packaged scripts as references to the now-gone build sandbox.
-# Replace the cross-compiler paths with their generic command names
-# and drop the build-only -fdebug-prefix-map flags so the scripts work
-# on a user's system after install.
+# Sherpa's autoconf-generated wrapper scripts bake CXX/CC in as the build
+# compiler (e.g. arm64-apple-darwin20.0.0-clang++). Rewrite these to the
+# generic name (clang++/g++) so they resolve at runtime via the clangxx/gxx
+# run-deps, strip build-prefix paths, and drop build-only flags.
 declare -a generated_scripts=(
     "${PREFIX}/bin/Sherpa-config"
     "${PREFIX}/bin/Sherpa-generate-model"
@@ -57,11 +51,17 @@ declare -a generated_scripts=(
 for script in "${generated_scripts[@]}"; do
     [[ -f "${script}" ]] || continue
     sed -i \
-        -e "s|${BUILD_PREFIX}/bin/${HOST}-c++|c++|g" \
-        -e "s|${BUILD_PREFIX}/bin/${HOST}-gcc|cc|g" \
-        -e "s|${BUILD_PREFIX}/bin/${HOST}-cc|cc|g" \
-        -e "s|${BUILD_PREFIX}/bin/${HOST}-gfortran|gfortran|g" \
+        -e "s|${BUILD_PREFIX}/bin/||g" \
+        -e "s|${HOST}-||g" \
         -e "s| -Wl,--no-as-needed||g" \
         -e "s| -fdebug-prefix-map=[^ '\"]*||g" \
         "${script}"
 done
+
+# Sanity check: fail loudly if any build-sandbox path survived the scrub
+# above (e.g. a -I/-L/--sysroot entry we did not anticipate), rather than
+# silently shipping a reference to the now-gone build environment.
+if grep -l -e "${BUILD_PREFIX}" -e "${SRC_DIR}" "${generated_scripts[@]}" 2>/dev/null; then
+    echo "ERROR: build-sandbox paths survived in the generated scripts listed above" >&2
+    exit 1
+fi
