@@ -1,0 +1,170 @@
+schema_version: 1
+
+context:
+  version: "2.2.16"
+
+package:
+  name: sherpa
+  version: ${{ version }}
+
+source:
+  url: https://gitlab.com/sherpa-team/sherpa/-/archive/v${{ version }}/sherpa-v${{ version }}.tar.gz
+  sha256: b2680da5682c78623635ae88a5ff5af346cf74c1be95ee9177e8f9080d418e76
+  patches:
+    # Avoid issue with compiling .pyc files during packaging step post build
+    - 0001-convert-print-statements-using-2to3.patch
+    # Avoid issue with null characters in the prefix replacement
+    - 0002-remove-null-characters-for-prefix-replacement.patch
+    # Fix stray 'R' before @end verbatim that modern texinfo rejects
+    - fix-stray-character-in-Manual-Starting-texi.patch
+    # Use 'lhapdf-config --libs' so libLHAPDF.so is recorded as a required
+    # dependency (LHAPDF v6.5.6+ splits -L between --ldflags and the actual
+    # -l between --libs).
+    # c.f. https://github.com/conda-forge/lhapdf-feedstock/pull/31#issuecomment-4204460519
+    - link-libLHAPDF-when-enabled.patch
+    # Strip embedded NULs from paths in Library_Loader so that
+    # conda-relocated paths (which contain NUL padding) work with
+    # stat(2)/dlopen(3); otherwise loading libLHAPDFSherpa.so fails
+    # at runtime on aarch64 with 'cannot read file data: Is a directory'.
+    - strip-null-bytes-in-Library_Loader.patch
+    # Compile/link Amegic process libs with the C++ compiler from $PREFIX/bin
+    # (absolute @BINDIR@ path), not SCons' bare 'gcc' fallback.
+    - link-amegic-process-libs-with-cxx.patch
+    # Invoke scons by absolute $PREFIX/bin path so makelibs works regardless of PATH.
+    - pin-makelibs-scons-to-prefix-bin.patch
+    # Report a 'rel-<version>' branch so the dev-branch warning isn't shown.
+    - set-release-version-string.patch
+
+build:
+  number: 4
+  skip: win
+
+requirements:
+  build:
+    - ${{ stdlib("c") }}
+    - ${{ compiler("cxx") }}
+    - ${{ compiler("fortran") }}
+    - if: unix
+      then: gnuconfig
+    - pkg-config
+    - autoconf
+    - libtool
+    - make
+    - automake
+    - which
+    - sed  # needed only to patch LDFLAGS
+    - diffutils
+    - texinfo  # can't skip build of manual
+  host:
+    - sqlite
+    - lhapdf
+    - hepmc2
+  # Amegic compiles process libraries at runtime ('makelibs'), so users need
+  # SCons + a C++ compiler (intentionally overrides no-compilers-in-run).
+  run:
+    - lhapdf
+    - hepmc2
+    - scons
+    - if: osx
+      then: clangxx
+    - if: linux
+      then: gxx
+
+tests:
+  - package_contents:
+      strict: true
+      bin:
+        - Sherpa
+        # FIXME: Broken (from MadLoop addon)
+        - sconsloops
+        - get_bibtex
+        - Sherpa-config
+        - init_nlo.sh
+        - plot_graphs.sh
+        - make2scons
+        - plot_stats.sh
+      lib:
+        - SHERPA-MC/*
+      include:
+        - SHERPA-MC/AHADIC++/*
+        - SHERPA-MC/AMEGIC++/*
+        - SHERPA-MC/AMISIC++/*
+        - SHERPA-MC/ATOOLS/*
+        - SHERPA-MC/AddOns/*
+        - SHERPA-MC/BEAM/*
+        - SHERPA-MC/COMIX/*
+        - SHERPA-MC/CSSHOWER++/*
+        - SHERPA-MC/DIRE/*
+        - SHERPA-MC/EXTRA_XS/*
+        - SHERPA-MC/HADRONS++/*
+        - SHERPA-MC/MCATNLO/*
+        - SHERPA-MC/METOOLS/*
+        - SHERPA-MC/MODEL/*
+        - SHERPA-MC/PDF/*
+        - SHERPA-MC/PHASIC++/*
+        - SHERPA-MC/PHOTONS++/*
+        - SHERPA-MC/SHERPA/*
+        - SHERPA-MC/SHRiMPS/*
+      files:
+        - share/SHERPA-MC/*
+        - share/doc/SHERPA-MC/Sherpa.html
+        - share/doc/SHERPA-MC/SherpaLogo.jpg
+        - share/info/Sherpa.info*
+        - share/man/man1/Sherpa.1
+        - etc/conda/test-files/sherpa/0/*
+        - etc/conda/test-files/sherpa/1/*
+
+  - files:
+      source:
+        - Examples
+    script:
+      - Sherpa-config
+      - Sherpa-config --version
+      - Sherpa-config --prefix
+      - Sherpa-config --incdir
+      - Sherpa-config --libs
+      - Sherpa-config --datadir
+      - Sherpa-config --ldflags
+      - Sherpa-config --cppflags
+      - Sherpa-config --cxx
+      # baked compiler must be generic (clang++/g++), not the build triplet,
+      # and the triplet must not survive anywhere in the generated wrappers
+      - 'case "$(Sherpa-config --cxx)" in *-apple-darwin* | *conda-linux-gnu*) exit 1 ;; esac'
+      - '! grep -E "(apple-darwin[0-9.]+|conda-linux-gnu)-(clang|gcc|c\+\+|g\+\+|gfortran)" "${PREFIX}/bin/make2scons" "${PREFIX}/bin/Sherpa-config" "${PREFIX}/share/SHERPA-MC/makelibs"'
+      - Sherpa --help
+      - cd Examples/CI/LO_Z
+      - if: build_platform == target_platform
+        then: Sherpa
+
+  # Exercise the Amegic runtime-compilation path (LO, no loop provider needed).
+  - files:
+      recipe:
+        - tests/amegic_compile/Run.dat
+    script:
+      - cd tests/amegic_compile
+      - Sherpa || true             # pass 1: write process source (exits non-zero by design)
+      - ./makelibs -j2             # compile
+      - Sherpa > pass2.log 2>&1    # pass 2: run with compiled libs
+      - 'grep -q "Generated events: 100" pass2.log'
+      - 'grep -q "Total XS" pass2.log'
+
+about:
+  summary: A Monte Carlo event generator for the Simulation of High-Energy Reactions of PArticles
+  description: |
+    Sherpa is a Monte Carlo event generator for the Simulation of High-Energy
+    Reactions of PArticles in lepton-lepton, lepton-photon, photon-photon,
+    lepton-hadron and hadron-hadron collisions. Simulation programs - also
+    dubbed event generators - like Sherpa are indispensable work horses for
+    current particle physics phenomenology and are (at) the interface between
+    theory and experiment.
+  license: GPL-3.0-or-later
+  license_file: COPYING
+  homepage: https://gitlab.com/sherpa-team/sherpa
+  repository: https://gitlab.com/sherpa-team/sherpa
+  documentation: https://sherpa-team.gitlab.io/
+
+extra:
+  recipe-maintainers:
+    - chrisburr
+    - kratsg
+    - matthewfeickert
