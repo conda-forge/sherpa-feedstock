@@ -1,5 +1,7 @@
 build_platform:
   linux_ppc64le: linux_64
+  linux_aarch64: linux_aarch64
+  osx_arm64: osx_arm64
 conda_build:
   error_overlinking: true
 conda_build_tool: rattler-build

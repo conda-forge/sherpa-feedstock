@@ -29,9 +29,8 @@ source:
     - strip-null-bytes-in-Library_Loader.patch
 
 build:
-  # FIXME: Get macOS builds working
   number: 4
-  skip: not linux
+  skip: win
 
 requirements:
   build:
