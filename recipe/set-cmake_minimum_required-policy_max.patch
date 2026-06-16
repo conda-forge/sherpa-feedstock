@@ -1,0 +1,27 @@
+From df2046885680495bc94fbcfffa5487f5e2625dff Mon Sep 17 00:00:00 2001
+From: Matthew Feickert <matthew.feickert@cern.ch>
+Date: Wed, 17 Jun 2026 00:28:13 -0600
+Subject: [PATCH] MNT: Set cmake_minimum_required policy_max
+
+* Set policy_max which defines the maximum CMake policy.
+  cmake_minimum_required sets two minimums: the real (lower) minimum and the
+  (upper) minimum based on has been tested with. The defaults (CMake policies)
+  will be set to the highest value possible between the two values.
+   - c.f. https://cmake.org/cmake/help/latest/command/cmake_minimum_required.html
+---
+ CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 497f536d1..71913c2ed 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-cmake_minimum_required(VERSION 3.12.0 FATAL_ERROR)
++cmake_minimum_required(VERSION 3.12...4.3)
+ ###########################Package@#####################################
+ project(SHERPA-MC LANGUAGES C  CXX)
+ #The complicated way to set the version is used to assure the simple
+-- 
+2.54.0
+

@@ -1,35 +1,23 @@
-From f42f8d0a99b0b8e017ed306547b6b31d1dfb5849 Mon Sep 17 00:00:00 2001
+From 583f3b5370e71810a4e820331bef3ba11b568904 Mon Sep 17 00:00:00 2001
 From: Matthew Feickert <matthew.feickert@cern.ch>
-Date: Sat, 2 May 2026 23:33:59 -0600
+Date: Tue, 16 Jun 2026 23:48:40 -0600
 Subject: [PATCH] ATOOLS: strip embedded NULs from Library_Loader paths
 
-When conda relocates the build prefix to the (shorter) install prefix
-in a binary, it overwrites the placeholder bytes with the new prefix
-followed by NUL padding. A C-style string is terminated at the first
-NUL, but std::string preserves the embedded NULs and any suffix that
-followed the placeholder in the original literal.
-
-Library_Loader concatenates such paths and feeds the result to
-stat(2) and dlopen(3) via std::string::c_str(). Those calls only see
-the prefix portion (a directory), and dlopen fails with
-'<prefix>: cannot read file data: Is a directory'. The aarch64 test
-job hits this when Variations::LoadLHAPDFInterfaceIfNecessary tries
-to load libLHAPDFSherpa.so via the Sherpa loader.
-
-Sanitise paths in the Library_Loader constructor, in AddPath, and in
-LoadLibrary itself so any embedded NULs introduced by relocation are
-removed before the path is handed to libc/libdl. This complements the
-existing null-stripping in Run_Parameter::Gen::Variable, which only
-covered paths read back via that accessor.
+Library_Loader concatenates conda-relocated paths and feeds the result to
+stat(2) and dlopen(3) via std::string::c_str(). When relocation has padded a
+path with embedded NULs, those calls only see the prefix portion (a directory),
+so dlopen fails with e.g. 'dlopen(.../lib/SHERPA-MC/): not a file'. Sanitise the
+paths in the constructor, AddPath and LoadLibrary. Complements the null-stripping
+in Run_Parameter::Gen::Variable for paths that bypass that accessor.
 ---
- ATOOLS/Org/Library_Loader.C | 34 ++++++++++++++++++++++++++--------
- 1 file changed, 26 insertions(+), 8 deletions(-)
+ ATOOLS/Org/Library_Loader.C | 32 ++++++++++++++++++++++++--------
+ 1 file changed, 24 insertions(+), 8 deletions(-)
 
 diff --git a/ATOOLS/Org/Library_Loader.C b/ATOOLS/Org/Library_Loader.C
-index dfae66b..d903364 100644
+index d53e6af..f800e85 100644
 --- a/ATOOLS/Org/Library_Loader.C
 +++ b/ATOOLS/Org/Library_Loader.C
-@@ -6,22 +6,39 @@
+@@ -6,6 +6,7 @@
  #include "ATOOLS/Org/Run_Parameter.H"
  #include "ATOOLS/Org/CXXFLAGS.H"
  
@@ -37,17 +25,16 @@ index dfae66b..d903364 100644
  #include <sys/stat.h>
  #include <dlfcn.h>
  #include <fstream>
- #include <unistd.h>
+@@ -13,16 +14,30 @@
  #include <iomanip>
+ #include <assert.h>
  
 +namespace {
-+  // Conda-style relocation may pad the build prefix with embedded NUL
-+  // bytes when replacing it with the (shorter) install prefix. A C++
-+  // std::string preserves those NULs, but the C-string view used by
-+  // stat(2) and dlopen(3) terminates at the first one, leaving us with
-+  // a path that resolves to the install prefix directory rather than
-+  // the intended library file. Strip any embedded NULs before using
-+  // the path with the C library.
++  // Conda relocation may pad the (shortened) install prefix with embedded NUL
++  // bytes. std::string preserves them, but the C-string view used by stat(2)
++  // and dlopen(3) terminates at the first NUL, leaving a path that resolves to
++  // the install-prefix directory rather than the intended library file. Strip
++  // any embedded NULs before the path is handed to libc/libdl.
 +  std::string strip_null_bytes(std::string s)
 +  {
 +    s.erase(std::remove(s.begin(), s.end(), '\0'), s.end());
@@ -72,7 +59,7 @@ index dfae66b..d903364 100644
  }
  
  bool Library_Loader::CreateLockFile(const std::string &lockname)
-@@ -85,7 +102,7 @@ void *Library_Loader::LoadLibrary(const std::string &name)
+@@ -86,7 +101,7 @@ void *Library_Loader::LoadLibrary(const std::string &name)
    if (lit!=m_libs.end()) return lit->second;
    msg_Debugging()<<"loading library 'lib"<<name<<LIB_SUFFIX<<"' {"<<std::endl;
    for (size_t i(0);i<m_paths.size();++i) {
@@ -81,7 +68,7 @@ index dfae66b..d903364 100644
      struct stat buffer;
      msg_Debugging()<<"checking for '"<<libname<<"' ... "<<std::flush;
      if (stat(libname.c_str(),&buffer)) {
-@@ -161,9 +178,10 @@ void *Library_Loader::GetLibraryFunction(const std::string &libname,
+@@ -180,9 +195,10 @@ void *Library_Loader::GetLibraryFunction(const std::string &funcname,
  }
  
  void Library_Loader::AddPath(const std::string &path,const int mode)
@@ -97,5 +84,5 @@ index dfae66b..d903364 100644
 +  else m_paths.insert(m_paths.begin(),clean);
  }
 -- 
-2.53.0
+2.54.0
 
