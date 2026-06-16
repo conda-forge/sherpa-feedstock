@@ -1,0 +1,22 @@
+diff --git a/AMEGIC++/Main/makelibs.in b/AMEGIC++/Main/makelibs.in
+index 08a3043fe..f9188802f 100755
+--- a/AMEGIC++/Main/makelibs.in
++++ b/AMEGIC++/Main/makelibs.in
+@@ -25,7 +25,7 @@ defaults(){
+ 
+ defaults;
+ 
+-which scons > /dev/null 2>&1 && SCONS=TRUE
++test -x "@BINDIR@/scons" && SCONS=TRUE
+ while getopts hsmcnoj:i: OPT
+ do
+   case $OPT in
+@@ -70,7 +70,7 @@ if [ "$SCONS" = "TRUE" ] ; then
+   for J in $DIRS ; do
+     @BINDIR@/make2scons $J $LIBMODE;
+   done
+-  scons -j$JOBS install $IPATH;
++  @BINDIR@/scons -j$JOBS install $IPATH;
+   exit 0;
+ fi
+ 

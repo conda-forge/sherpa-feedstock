@@ -27,8 +27,11 @@ source:
     # stat(2)/dlopen(3); otherwise loading libLHAPDFSherpa.so fails
     # at runtime on aarch64 with 'cannot read file data: Is a directory'.
     - strip-null-bytes-in-Library_Loader.patch
-    # Link Amegic's runtime-compiled process libs with $CXX, not bare 'gcc'.
+    # Compile/link Amegic process libs with the C++ compiler from $PREFIX/bin
+    # (absolute @BINDIR@ path), not SCons' bare 'gcc' fallback.
     - link-amegic-process-libs-with-cxx.patch
+    # Invoke scons by absolute $PREFIX/bin path so makelibs works regardless of PATH.
+    - pin-makelibs-scons-to-prefix-bin.patch
     # Report a 'rel-<version>' branch so the dev-branch warning isn't shown.
     - set-release-version-string.patch
 
