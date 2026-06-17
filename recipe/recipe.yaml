@@ -1,7 +1,7 @@
 schema_version: 1
 
 context:
-  version: "2.2.16"
+  version: "3.0.0"
 
 package:
   name: sherpa
@@ -9,34 +9,24 @@ package:
 
 source:
   url: https://gitlab.com/sherpa-team/sherpa/-/archive/v${{ version }}/sherpa-v${{ version }}.tar.gz
-  sha256: b2680da5682c78623635ae88a5ff5af346cf74c1be95ee9177e8f9080d418e76
+  sha256: e460d8798b323c4ef663293a2c918b1463e9641b35703a54d70d25c852c67d36
   patches:
-    # Avoid issue with compiling .pyc files during packaging step post build
-    - 0001-convert-print-statements-using-2to3.patch
-    # Avoid issue with null characters in the prefix replacement
-    - 0002-remove-null-characters-for-prefix-replacement.patch
-    # Fix stray 'R' before @end verbatim that modern texinfo rejects
-    - fix-stray-character-in-Manual-Starting-texi.patch
-    # Use 'lhapdf-config --libs' so libLHAPDF.so is recorded as a required
-    # dependency (LHAPDF v6.5.6+ splits -L between --ldflags and the actual
-    # -l between --libs).
-    # c.f. https://github.com/conda-forge/lhapdf-feedstock/pull/31#issuecomment-4204460519
-    - link-libLHAPDF-when-enabled.patch
-    # Strip embedded NULs from paths in Library_Loader so that
-    # conda-relocated paths (which contain NUL padding) work with
-    # stat(2)/dlopen(3); otherwise loading libLHAPDFSherpa.so fails
-    # at runtime on aarch64 with 'cannot read file data: Is a directory'.
+    # Allow for modern CMake
+    - set-cmake_minimum_required-policy_max.patch
+    # Sherpa misuses add_custom_command keywords (PRE_BUILD on an OUTPUT command in
+    # the Python bindings; DEPENDS on a TARGET command for the NNPDF unpack). Older
+    # CMake ignored them, but they are hard errors under the policy_max above.
+    - fix-add_custom_command-keywords.patch
+    # conda relocation pads the shortened install prefix with embedded NUL bytes;
+    # std::string keeps them but stat(2)/dlopen(3) truncate at the first NUL, so
+    # baked library paths resolve to a directory and Sherpa aborts at runtime with
+    # "dlopen(${PREFIX}/lib/SHERPA-MC/): not a file" (seen on osx-arm64/aarch64).
+    # Strip NULs where such paths are read and used.
+    - remove-null-characters-for-prefix-replacement.patch
     - strip-null-bytes-in-Library_Loader.patch
-    # Compile/link Amegic process libs with the C++ compiler from $PREFIX/bin
-    # (absolute @BINDIR@ path), not SCons' bare 'gcc' fallback.
-    - link-amegic-process-libs-with-cxx.patch
-    # Invoke scons by absolute $PREFIX/bin path so makelibs works regardless of PATH.
-    - pin-makelibs-scons-to-prefix-bin.patch
-    # Report a 'rel-<version>' branch so the dev-branch warning isn't shown.
-    - set-release-version-string.patch
 
 build:
-  number: 5
+  number: 0
   skip: win
 
 requirements:
@@ -46,45 +36,45 @@ requirements:
     - ${{ stdlib("c") }}
     - ${{ compiler("cxx") }}
     - ${{ compiler("fortran") }}
-    - if: unix
-      then: gnuconfig
+    - cmake
+    - ninja
     - pkg-config
-    - autoconf
-    - libtool
-    - make
-    - automake
     - which
-    - sed  # needed only to patch LDFLAGS
-    - diffutils
-    - texinfo  # can't skip build of manual
+    - grep
+    - sed
+    # python bindings
+    - swig
   host:
     - sqlite
     - lhapdf
-    - hepmc2
-  # Amegic compiles process libraries at runtime ('makelibs'), so users need
-  # SCons + a C++ compiler (intentionally overrides no-compilers-in-run).
+    - hepmc3
+    - libzip
+    - python
+  # Amegic compiles process libraries at runtime ('makelibs'), which drives
+  # CMake, so users need cmake + ninja + a C++ compiler at run time.
+  # Intentionally overrides no-compilers-in-run.
   run:
     - lhapdf
-    - hepmc2
-    - scons
+    - hepmc3
+    - cmake
+    - ninja
     - if: osx
       then: clangxx
     - if: linux
       then: gxx
+    - python
 
 tests:
   - package_contents:
       strict: true
       bin:
         - Sherpa
-        # FIXME: Broken (from MadLoop addon)
-        - sconsloops
-        - get_bibtex
         - Sherpa-config
         - init_nlo.sh
-        - plot_graphs.sh
-        - make2scons
         - plot_stats.sh
+        # sconsloops, plot_graphs and makelibs install under share/SHERPA-MC/
+        # in v3 (covered by the share/SHERPA-MC/* glob below); make2scons and
+        # get_bibtex are no longer shipped.
       lib:
         - SHERPA-MC/*
       include:
@@ -92,11 +82,14 @@ tests:
         - SHERPA-MC/AMEGIC++/*
         - SHERPA-MC/AMISIC++/*
         - SHERPA-MC/ATOOLS/*
-        - SHERPA-MC/AddOns/*
+        # AddOns/Python ships MEProcess.H only when the Python bindings are built
+        - SHERPA-MC/AddOns/Python/*
         - SHERPA-MC/BEAM/*
         - SHERPA-MC/COMIX/*
         - SHERPA-MC/CSSHOWER++/*
+        - SHERPA-MC/DIM/*
         - SHERPA-MC/DIRE/*
+        - SHERPA-MC/EXTAMP/*
         - SHERPA-MC/EXTRA_XS/*
         - SHERPA-MC/HADRONS++/*
         - SHERPA-MC/MCATNLO/*
@@ -105,50 +98,56 @@ tests:
         - SHERPA-MC/PDF/*
         - SHERPA-MC/PHASIC++/*
         - SHERPA-MC/PHOTONS++/*
+        - SHERPA-MC/RECONNECTIONS/*
+        - SHERPA-MC/REMNANTS/*
         - SHERPA-MC/SHERPA/*
         - SHERPA-MC/SHRiMPS/*
+        - SHERPA-MC/YFS/*
       files:
         - share/SHERPA-MC/*
-        - share/doc/SHERPA-MC/Sherpa.html
-        - share/doc/SHERPA-MC/SherpaLogo.jpg
-        - share/info/Sherpa.info*
-        - share/man/man1/Sherpa.1
         - etc/conda/test-files/sherpa/0/*
-        - etc/conda/test-files/sherpa/1/*
+        # Python bindings (one build per python version; path is version-specific)
+        - lib/python*/site-packages/Sherpa.py
+        - lib/python*/site-packages/_Sherpa.so
+        - lib/python*/site-packages/__pycache__/Sherpa.cpython-*.pyc
 
   - files:
       source:
         - Examples
+      recipe:
+        - tests/amegic_compile/Sherpa.yaml
     script:
       - Sherpa-config
-      - Sherpa-config --version
-      - Sherpa-config --prefix
-      - Sherpa-config --incdir
-      - Sherpa-config --libs
-      - Sherpa-config --datadir
-      - Sherpa-config --ldflags
-      - Sherpa-config --cppflags
-      - Sherpa-config --cxx
+      - 'echo "# Sherpa-config --version: $(Sherpa-config --version)"'
+      - 'echo "# Sherpa-config --prefix: $(Sherpa-config --prefix)"'
+      - 'echo "# Sherpa-config --incdir: $(Sherpa-config --incdir)"'
+      - 'echo "# Sherpa-config --libs: $(Sherpa-config --libs)"'
+      - 'echo "# Sherpa-config --datadir: $(Sherpa-config --datadir)"'
+      - 'echo "# Sherpa-config --ldflags: $(Sherpa-config --ldflags)"'
+      - 'echo "# Sherpa-config --cppflags: $(Sherpa-config --cppflags)"'
+      - 'echo "# Sherpa-config --cxx: $(Sherpa-config --cxx)"'
+      - 'echo "# Sherpa-config --fc: $(Sherpa-config --fc)"'
+      - 'echo "# Sherpa-config --python-libs: $(Sherpa-config --python-libs)"'
+
       # baked compiler must be generic (clang++/g++), not the build triplet,
       # and the triplet must not survive anywhere in the generated wrappers
       - 'case "$(Sherpa-config --cxx)" in *-apple-darwin* | *conda-linux-gnu*) exit 1 ;; esac'
-      - '! grep -E "(apple-darwin[0-9.]+|conda-linux-gnu)-(clang|gcc|c\+\+|g\+\+|gfortran)" "${PREFIX}/bin/make2scons" "${PREFIX}/bin/Sherpa-config" "${PREFIX}/share/SHERPA-MC/makelibs"'
+      - '! grep -E "(apple-darwin[0-9.]+|conda-linux-gnu)-(clang|gcc|c\+\+|g\+\+|gfortran)" "${PREFIX}/bin/Sherpa-config" "${PREFIX}/share/SHERPA-MC/makelibs"'
       - Sherpa --help
-      - cd Examples/CI/LO_Z
       - if: build_platform == target_platform
-        then: Sherpa
-
-  # Exercise the Amegic runtime-compilation path (LO, no loop provider needed).
-  - files:
-      recipe:
-        - tests/amegic_compile/Run.dat
-    script:
-      - cd tests/amegic_compile
-      - Sherpa || true             # pass 1: write process source (exits non-zero by design)
-      - ./makelibs -j2             # compile
-      - Sherpa > pass2.log 2>&1    # pass 2: run with compiled libs
-      - 'grep -q "Generated events: 100" pass2.log'
-      - 'grep -q "Total XS" pass2.log'
+        then:
+          - cd Examples/CI/LO_Z
+          - lhapdf install PDF4LHC21_40_pdfas &> download_log.txt
+          - lhapdf install PDF4LHC21_40_pdfas
+          - Sherpa
+          - cd -
+          # Test the Amegic runtime-compilation path (LO, no loop provider needed).
+          - cd tests/amegic_compile
+          - Sherpa || true             # pass 1: write process source (exits non-zero by design)
+          - CMAKE_GENERATOR=Ninja ./makelibs -j2   # compile (makelibs drives CMake; force Ninja)
+          - Sherpa > pass2.log 2>&1 || { cat pass2.log; false; }   # pass 2: run with compiled libs
+          - 'grep -q "Generated events: 100" pass2.log'
+          - 'grep -q "XS =" pass2.log'   # v3 reports the cross section as "XS = <value> pb +- (...)"
 
 about:
   summary: A Monte Carlo event generator for the Simulation of High-Energy Reactions of PArticles

@@ -1,42 +1,68 @@
 #!/usr/bin/env bash
 
 set -x
+set -e
+set -u
+set -o pipefail
 
-# Get an updated config.sub and config.guess
-cp ${BUILD_PREFIX}/share/gnuconfig/config.* .
-
-# For Sherpa v2, remove specific linker flags from LDFLAGS to ensure all libraries
-# have symbols defined after the packaging step
-if [[ "${build_platform}" == linux-* ]]; then
-    # On Linux remove '--as-needed' flag
-    # c.f. https://linux.die.net/man/1/ld
-    export LDFLAGS="$(echo $LDFLAGS | sed 's/ -Wl,--as-needed//g')"
-else
-    # On macOS remove '-dead_strip_dylibs' flag
-    # c.f. https://github.com/AnacondaRecipes/intel_repack-feedstock/issues/8
-    export LDFLAGS="$(echo $LDFLAGS | sed 's/ -Wl,-dead_strip_dylibs//g')"
+# A release tarball has no .git, so Sherpa's CMakeLists.txt records the build's
+# git branch as "unknownurl". At runtime Sherpa then prints
+#   "WARNING: You are using an unsupported development branch."
+# because it only treats branches whose name starts with "rel-" as releases
+# (c.f. ATOOLS/Org/Run_Parameter.C::PrintGitVersion). Set ${PKG_VERSION} as the
+# release.
+if ! grep -q 'set(GITURL "unknownurl")' "${SRC_DIR}/CMakeLists.txt"; then
+    echo "ERROR: Sherpa git-info fallback not found; the dev-branch warning fix needs updating" >&2
+    exit 1
 fi
+sed -i \
+    -e "s|set(GITURL \"unknownurl\")|set(GITURL \"rel-${PKG_VERSION}\")|" \
+    -e "s|set(GITREV \"unknownrevision\")|set(GITREV \"v${PKG_VERSION}\")|" \
+    "${SRC_DIR}/CMakeLists.txt"
 
-autoreconf --install
+# Sherpa's CMakeLists.txt re-validates every token of CMAKE_{C,CXX,Fortran}_FLAGS
+# through check_<lang>_compiler_flag(), splitting the flags on whitespace first.
+# This breaks conda's two-token "-isystem ${PREFIX}/include": the lone "-isystem"
+# fails the check and is dropped, orphaning the bare "${PREFIX}/include" path.
+# That bare path both hides headers like libzip's <zip.h> at compile time and is
+# handed to the linker ("ld: ${PREFIX}/include: Is a directory") at link time.
+# Collapse it to the joined single-token form "-isystem${PREFIX}/include" (gcc
+# and clang accept -isystem with no space); this survives the filter intact and
+# preserves the original -isystem semantics. CMAKE_FORCE_FLAGS=ON additionally
+# tells Sherpa to keep the flags verbatim (otherwise the filter also drops
+# conda's -fdebug-prefix-map).
+search="-isystem ${PREFIX}/include"
+replace="-isystem${PREFIX}/include"
+export CFLAGS="${CFLAGS//${search}/${replace}}"
+export CXXFLAGS="${CXXFLAGS//${search}/${replace}}"
+export FFLAGS="${FFLAGS//${search}/${replace}}"
 
-./configure --help
+# On macOS, Sherpa links every shared library with "-undefined dynamic_lookup"
+# (CMakeLists.txt), so cross-library references such as MODEL::as are emitted as
+# flat-namespace undefined symbols rather than recorded two-level dependencies.
+# conda's default "-Wl,-dead_strip_dylibs" then strips the load command for the
+# dylib that actually provides such a symbol (e.g. libModelMain, which defines
+# MODEL::as) because it sees no two-level use of it -- so at runtime dyld aborts
+# with "symbol not found in flat namespace '__ZN5MODEL2asE'". Drop the flag so
+# the linked dylibs stay loaded. No-op on Linux (its LDFLAGS lack the flag).
+export LDFLAGS="${LDFLAGS//-Wl,-dead_strip_dylibs/}"
 
-# Sherpa v2 is Python 2 only, so disable Python
-./configure \
-    --prefix=$PREFIX \
-    --enable-hepmc2=$PREFIX \
-    --enable-lhapdf=$PREFIX \
-    --with-sqlite3=$PREFIX \
-    CXX="$CXX" \
-    CXXFLAGS="$CXXFLAGS" \
-    LDFLAGS="$LDFLAGS" \
-    PYTHON=""
+cmake ${CMAKE_ARGS} \
+    -G Ninja \
+    -DCMAKE_FORCE_FLAGS=ON \
+    -DSHERPA_ENABLE_HEPMC3=ON \
+    -DSHERPA_ENABLE_PYTHON=ON \
+    -DCMAKE_CXX_STANDARD=17 \
+    -S "${SRC_DIR}" \
+    -B build
+cmake build -LH
+cmake --build build --parallel "${CPU_COUNT}"
+cmake --install build
 
+# Skip ctest when cross-compiling
 if [[ "${CONDA_BUILD_CROSS_COMPILATION:-}" != "1" || "${CROSSCOMPILING_EMULATOR:-}" != "" ]]; then
-  make check --jobs="${CPU_COUNT}"
+  ctest --test-dir build
 fi
-
-make install
 
 # Sherpa's autoconf-generated wrapper scripts bake CXX/CC in as the build
 # compiler (e.g. arm64-apple-darwin20.0.0-clang++). Rewrite these to the

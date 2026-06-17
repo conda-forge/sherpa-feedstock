@@ -1,0 +1,47 @@
+From 063370fbd65cabfa8ecb033bb2a569ecf2085db0 Mon Sep 17 00:00:00 2001
+From: Matthew Feickert <matthew.feickert@cern.ch>
+Date: Wed, 17 Jun 2026 00:47:38 -0600
+Subject: [PATCH] Fix invalid add_custom_command keyword usage for modern CMake
+
+Sherpa's CMake uses two add_custom_command calls with keywords that belong to
+the other signature; older CMake silently ignored them, but they are hard errors
+under newer policies (e.g. via cmake_minimum_required(... policy_max)):
+
+ * AddOns/Python/CMakeLists.txt: an OUTPUT-form command carried PRE_BUILD, which
+   is only valid for the TARGET form. (Only reached with SHERPA_ENABLE_PYTHON=ON.)
+ * CMakeLists.txt: the unZipNNPDF31 TARGET-form command carried DEPENDS, which is
+   only valid for the OUTPUT form.
+
+Both misplaced keywords were no-ops, so removing them is behaviour-preserving.
+---
+ AddOns/Python/CMakeLists.txt | 1 -
+ CMakeLists.txt               | 1 -
+ 2 files changed, 2 deletions(-)
+
+diff --git a/AddOns/Python/CMakeLists.txt b/AddOns/Python/CMakeLists.txt
+index 515b8e5..e87b16c 100644
+--- a/AddOns/Python/CMakeLists.txt
++++ b/AddOns/Python/CMakeLists.txt
+@@ -23,7 +23,6 @@ set(PYTHONSRC)
+ foreach( file_i ${PYEXTFILES_GEN})
+   if ( NOT ("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}") )
+     add_custom_command(
+-    PRE_BUILD
+     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${file_i}
+     COMMAND ${CMAKE_COMMAND}
+     ARGS -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${file_i} ${CMAKE_CURRENT_BINARY_DIR}/${file_i}
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 497f536..2c07f8c 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -675,7 +675,6 @@ add_custom_command(TARGET unZipNNPDF31_nnlo_as_0118_mc PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_CURRENT_BINARY_DIR}/NNPDF31_nnlo_as_0118_mc
+        COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_CURRENT_SOURCE_DIR}/PDF/NNPDF/NNPDF31_nnlo_as_0118_mc.tar.bz2
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+-       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/PDF/NNPDF/NNPDF31_nnlo_as_0118_mc.tar.bz2
+        COMMENT "Unpacking NNPDF31_nnlo_as_0118_mc.tar.bz2"
+        VERBATIM)
+ install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/NNPDF31_nnlo_as_0118_mc DESTINATION  ${CMAKE_INSTALL_DATADIR}/SHERPA-MC${VERSIONING}/ COMPONENT doc )
+-- 
+2.54.0
+
