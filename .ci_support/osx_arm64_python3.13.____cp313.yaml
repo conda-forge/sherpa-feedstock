@@ -18,12 +18,20 @@ fortran_compiler:
 - gfortran
 fortran_compiler_version:
 - '14'
-hepmc2:
-- '2.06'
+hepmc3:
+- '3.3'
 lhapdf:
 - '6.5'
+libzip:
+- '1'
 macos_machine:
 - arm64-apple-darwin20.0.0
+pin_run_as_build:
+  python:
+    min_pin: x.x
+    max_pin: x.x
+python:
+- 3.13.* *_cp313
 sqlite:
 - '3'
 target_platform:
