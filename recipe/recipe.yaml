@@ -26,7 +26,7 @@ source:
     - strip-null-bytes-in-Library_Loader.patch
 
 build:
-  number: 0
+  number: 1
   skip: win
 
 requirements:
@@ -105,11 +105,15 @@ tests:
         - SHERPA-MC/YFS/*
       files:
         - share/SHERPA-MC/*
-        - etc/conda/test-files/sherpa/0/*
-        # Python bindings (one build per python version; path is version-specific)
+        - etc/conda/test-files/sherpa/1/*
+        # Python bindings (path is Python version specific)
         - lib/python*/site-packages/Sherpa.py
         - lib/python*/site-packages/_Sherpa.so
         - lib/python*/site-packages/__pycache__/Sherpa.cpython-*.pyc
+
+  - python:
+      imports:
+        - Sherpa
 
   - files:
       source:
