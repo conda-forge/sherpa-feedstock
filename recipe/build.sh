@@ -37,14 +37,20 @@ export CFLAGS="${CFLAGS//${search}/${replace}}"
 export CXXFLAGS="${CXXFLAGS//${search}/${replace}}"
 export FFLAGS="${FFLAGS//${search}/${replace}}"
 
-# On macOS, Sherpa links every shared library with "-undefined dynamic_lookup"
-# (CMakeLists.txt), so cross-library references such as MODEL::as are emitted as
-# flat-namespace undefined symbols rather than recorded two-level dependencies.
-# conda's default "-Wl,-dead_strip_dylibs" then strips the load command for the
-# dylib that actually provides such a symbol (e.g. libModelMain, which defines
-# MODEL::as) because it sees no two-level use of it -- so at runtime dyld aborts
-# with "symbol not found in flat namespace '__ZN5MODEL2asE'". Drop the flag so
-# the linked dylibs stay loaded. No-op on Linux (its LDFLAGS lack the flag).
+# Sherpa's shared libraries have incomplete inter-library link dependencies and
+# rely on the executable loading every library into one global symbol scope (its
+# libs are built with undefined symbols left to resolve at runtime). conda's
+# default link-time GC flags prune libraries whose symbols a given object does
+# not *directly* reference, which breaks any isolated consumer that must resolve
+# those cross-library symbols on its own:
+#   * Linux "-Wl,--as-needed" drops e.g. libYFSCEEX from _Sherpa.so's DT_NEEDED,
+#     so "import Sherpa" fails with
+#     "libYFSMain.so: undefined symbol: YFS::Ceex_Base::Ceex_Base(...)".
+#   * macOS "-Wl,-dead_strip_dylibs" drops e.g. libModelMain, so Sherpa aborts
+#     with "symbol not found in flat namespace '__ZN5MODEL2asE'" (MODEL::as).
+# Drop both so the linked libraries stay in DT_NEEDED / load commands. Each
+# substitution is a no-op on the platform whose LDFLAGS lack that flag.
+export LDFLAGS="${LDFLAGS//-Wl,--as-needed/}"
 export LDFLAGS="${LDFLAGS//-Wl,-dead_strip_dylibs/}"
 
 cmake ${CMAKE_ARGS} \
