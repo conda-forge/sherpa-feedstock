@@ -26,7 +26,7 @@ source:
     - strip-null-bytes-in-Library_Loader.patch
 
 build:
-  number: 1
+  number: 2
   skip: win
 
 requirements:
