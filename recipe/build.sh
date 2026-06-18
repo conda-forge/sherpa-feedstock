@@ -57,8 +57,10 @@ cmake ${CMAKE_ARGS} \
     -G Ninja \
     -DCMAKE_FORCE_FLAGS=ON \
     -DSHERPA_ENABLE_HEPMC3=ON \
+    -DSHERPA_ENABLE_GZIP=ON \
     -DSHERPA_ENABLE_PYTHON=ON \
     -DCMAKE_CXX_STANDARD=17 \
+    -DSHERPA_ENABLE_TESTING=ON \
     -S "${SRC_DIR}" \
     -B build
 cmake build -LH
@@ -67,6 +69,7 @@ cmake --install build
 
 # Skip ctest when cross-compiling
 if [[ "${CONDA_BUILD_CROSS_COMPILATION:-}" != "1" || "${CROSSCOMPILING_EMULATOR:-}" != "" ]]; then
+  export CMAKE_GENERATOR="Ninja"
   ctest --test-dir build
 fi
 
