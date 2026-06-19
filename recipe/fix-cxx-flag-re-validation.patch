@@ -1,0 +1,26 @@
+From 95ec5558995cc419807bccb22787c8b8fc93b1a1 Mon Sep 17 00:00:00 2001
+From: Daniel Reichelt <danielreichelt@me.com>
+Date: Sat, 2 Nov 2024 00:16:08 +0000
+Subject: [PATCH] Resolve "Build error given listed minimum required
+ dependencies"
+
+---
+ CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 4c6d5bdf6..50948a7b3 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -184,7 +184,7 @@ include(CheckCCompilerFlag)
+ include(CheckCXXCompilerFlag)
+ set(CXX_CXX_FLAGS_TO_CHECK -Wno-tautological-constant-compare)
+ set ( NEW_CMAKE_CXX_FLAGS " ")
+-string(REPLACE " " ";" LIST_CMAKE_CXX_FLAGS "${CXX_CXX_FLAGS_TO_CHECK} ${CMAKE_CXX_FLAGS}")
++string(REPLACE " -" ";-" LIST_CMAKE_CXX_FLAGS "${CXX_CXX_FLAGS_TO_CHECK} ${CMAKE_CXX_FLAGS}")
+ foreach(fx IN LISTS LIST_CMAKE_CXX_FLAGS)
+   if (fx)
+     check_cxx_compiler_flag(${fx} CXX_COMPILER_SUPPORTS_${fx})
+-- 
+2.54.0
+
