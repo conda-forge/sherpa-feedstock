@@ -20,23 +20,6 @@ sed -i \
     -e "s|set(GITREV \"unknownrevision\")|set(GITREV \"v${PKG_VERSION}\")|" \
     "${SRC_DIR}/CMakeLists.txt"
 
-# Sherpa's CMakeLists.txt re-validates every token of CMAKE_{C,CXX,Fortran}_FLAGS
-# through check_<lang>_compiler_flag(), splitting the flags on whitespace first.
-# This breaks conda's two-token "-isystem ${PREFIX}/include": the lone "-isystem"
-# fails the check and is dropped, orphaning the bare "${PREFIX}/include" path.
-# That bare path both hides headers like libzip's <zip.h> at compile time and is
-# handed to the linker ("ld: ${PREFIX}/include: Is a directory") at link time.
-# Collapse it to the joined single-token form "-isystem${PREFIX}/include" (gcc
-# and clang accept -isystem with no space); this survives the filter intact and
-# preserves the original -isystem semantics. CMAKE_FORCE_FLAGS=ON additionally
-# tells Sherpa to keep the flags verbatim (otherwise the filter also drops
-# conda's -fdebug-prefix-map).
-search="-isystem ${PREFIX}/include"
-replace="-isystem${PREFIX}/include"
-export CFLAGS="${CFLAGS//${search}/${replace}}"
-export CXXFLAGS="${CXXFLAGS//${search}/${replace}}"
-export FFLAGS="${FFLAGS//${search}/${replace}}"
-
 # Sherpa's shared libraries have incomplete inter-library link dependencies and
 # rely on the executable loading every library into one global symbol scope (its
 # libs are built with undefined symbols left to resolve at runtime). conda's

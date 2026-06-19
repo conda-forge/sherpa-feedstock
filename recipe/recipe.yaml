@@ -24,6 +24,12 @@ source:
     # Strip NULs where such paths are read and used.
     - remove-null-characters-for-prefix-replacement.patch
     - strip-null-bytes-in-Library_Loader.patch
+    # Remove after v3.0.2
+    # c.f. https://gitlab.com/sherpa-team/sherpa/-/merge_requests/1000
+    - fix-cxx-flag-re-validation.patch
+    # Remove after v3.0.5
+    # c.f. https://gitlab.com/sherpa-team/sherpa/-/merge_requests/1277
+    - fix-c-fortran-flag-re-validation.patch
 
 build:
   number: 3
