@@ -1,7 +1,7 @@
 schema_version: 1
 
 context:
-  version: "3.0.0"
+  version: "3.0.4"
 
 package:
   name: sherpa
@@ -9,7 +9,7 @@ package:
 
 source:
   url: https://gitlab.com/sherpa-team/sherpa/-/archive/v${{ version }}/sherpa-v${{ version }}.tar.gz
-  sha256: e460d8798b323c4ef663293a2c918b1463e9641b35703a54d70d25c852c67d36
+  sha256: a9ddc4ee35087c5a669cf6fae151ea72bcc6882270aa7e7c7a37f9574ceea197
   patches:
     # Allow for modern CMake
     - set-cmake_minimum_required-policy_max.patch
@@ -26,7 +26,7 @@ source:
     - strip-null-bytes-in-Library_Loader.patch
 
 build:
-  number: 2
+  number: 0
   skip: win
 
 requirements:
