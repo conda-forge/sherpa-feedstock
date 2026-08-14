@@ -1,0 +1,44 @@
+From 3b32d7132735c49563c5b677a09abaf8e4c69b8e Mon Sep 17 00:00:00 2001
+From: Matthew Feickert <matthew.feickert@cern.ch>
+Date: Wed, 17 Jun 2026 16:29:55 -0600
+Subject: [PATCH] MNT: Split C/Fortran flag re-validation on ' -'
+
+The compiler-flag re-validation loops split CMAKE_<LANG>_FLAGS into a list
+before passing each entry to check_<lang>_compiler_flag(). The CXX loop already
+splits on " -" (space before a dash) so that two-token flags such as
+"-isystem <dir>", "-isysroot <dir>" or "-arch <a>" stay intact, but the C
+and Fortran loops still split on a bare space.
+
+Currently, a two-token flag in CMAKE_C_FLAGS / CMAKE_Fortran_FLAGS is split
+apart, such that "-isystem /opt/include" becomes the separate tokens "-isystem"
+(which fails check_c_compiler_flag and is dropped) and "/opt/include" (an
+orphaned path that is later handed to the compiler/linker as a stray input).
+---
+ CMakeLists.txt | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index f6d6d276b..df43ee7ba 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -216,7 +216,7 @@ message(STATUS "SHERPA: CMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}")
+ ########################################################################
+ 
+ set ( NEW_CMAKE_C_FLAGS " ")
+-string(REPLACE " " ";" LIST_CMAKE_C_FLAGS "${C_C_FLAGS_TO_CHECK} ${CMAKE_C_FLAGS}")
++string(REPLACE " -" ";-" LIST_CMAKE_C_FLAGS "${C_C_FLAGS_TO_CHECK} ${CMAKE_C_FLAGS}")
+ foreach(fx IN LISTS LIST_CMAKE_C_FLAGS)
+   if (fx)
+     check_c_compiler_flag(${fx} C_COMPILER_SUPPORTS_${fx})
+@@ -235,7 +235,7 @@ message(STATUS "SHERPA: CMAKE_C_FLAGS=${CMAKE_C_FLAGS}")
+ if (SHERPA_ENABLE_FORTRAN)
+   include(CheckFortranCompilerFlag)
+   set ( NEW_CMAKE_Fortran_FLAGS " ")
+-  string(REPLACE " " ";" LIST_CMAKE_Fortran_FLAGS  "${F_Fortran_FLAGS_TO_CHECK} ${CMAKE_Fortran_FLAGS}")
++  string(REPLACE " -" ";-" LIST_CMAKE_Fortran_FLAGS  "${F_Fortran_FLAGS_TO_CHECK} ${CMAKE_Fortran_FLAGS}")
+   foreach(fl IN LISTS LIST_CMAKE_Fortran_FLAGS)
+     if (fl)
+       check_Fortran_compiler_flag(${fl} Fortran_COMPILER_SUPPORTS_${fl})
+-- 
+2.54.0
+
