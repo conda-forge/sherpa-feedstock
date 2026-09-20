@@ -1,0 +1,30 @@
+From 2bf656441fadb768b7fc40d539e4b9d534d4d9bb Mon Sep 17 00:00:00 2001
+From: Andrii Verbytskyi <2178089-andriish@users.noreply.gitlab.com>
+Date: Sat, 8 Feb 2025 11:25:33 +0000
+Subject: [PATCH] Edit emitterutils.cpp to add missing header
+
+Sherpa's vendored yaml-cpp uses uint16_t/uint32_t in emitterutils.cpp without
+including <cstdint>. libstdc++ used to pull it in transitively; GCC 15 no longer
+does, so the file fails to compile with "'uint16_t' was not declared in this
+scope".
+
+Backported from upstream, which released the fix in v3.0.2.
+---
+ ATOOLS/YAML/emitterutils.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/ATOOLS/YAML/emitterutils.cpp b/ATOOLS/YAML/emitterutils.cpp
+index 1111111..2222222 100644
+--- a/ATOOLS/YAML/emitterutils.cpp
++++ b/ATOOLS/YAML/emitterutils.cpp
+@@ -10,6 +10,7 @@
+ #include "stringsource.h"
+ #include "yaml-cpp/binary.h"  // IWYU pragma: keep
+ #include "yaml-cpp/null.h"
++#include <cstdint>
+ #include "yaml-cpp/ostream_wrapper.h"
+ 
+ namespace SHERPA_YAML {
+-- 
+2.51.0
+

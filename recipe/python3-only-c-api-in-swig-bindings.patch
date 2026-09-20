@@ -1,0 +1,45 @@
+From 5cc45a244534ad18561fd4f0fca264a4b323e2f4 Mon Sep 17 00:00:00 2001
+From: Andrii Verbytskyi <2178089-andriish@users.noreply.gitlab.com>
+Date: Mon, 7 Sep 2026 13:00:25 +0000
+Subject: [PATCH] Improve support for Python3 with newest swig 4.5+
+
+The SWIG interface files call PyString_FromString and PyInt_FromLong, which are
+Python 2 C-API names. SWIG's pyhead.swg used to #define them onto their Python 3
+equivalents, but SWIG 4.5 dropped Python 2 support and removed those shims, so
+the generated Sherpa_wrap.cxx now fails with "use of undeclared identifier".
+
+Backported from upstream master; not in any 3.0.x release yet.
+---
+ AddOns/Python/Exception.i | 2 +-
+ AddOns/Python/MEProcess.i | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/AddOns/Python/Exception.i b/AddOns/Python/Exception.i
+index 1111111..2222222 100644
+--- a/AddOns/Python/Exception.i
++++ b/AddOns/Python/Exception.i
+@@ -16,7 +16,7 @@ namespace ATOOLS {
+       PyObject* __str__() {
+ 	MyStrStream conv;
+ 	conv<<*self;
+-	return PyString_FromString(conv.str().c_str());
++	return PyUnicode_FromString(conv.str().c_str());
+       };
+     };
+ 
+diff --git a/AddOns/Python/MEProcess.i b/AddOns/Python/MEProcess.i
+index 1111111..2222222 100644
+--- a/AddOns/Python/MEProcess.i
++++ b/AddOns/Python/MEProcess.i
+@@ -82,7 +82,7 @@ public:
+           Py_DECREF(m2);
+           Py_DECREF(m3);
+ 	}
+-      return PyInt_FromLong(1);
++      return PyLong_FromLong(1);
+     };
+   }
+ 
+-- 
+2.51.0
+

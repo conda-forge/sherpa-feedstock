@@ -9,13 +9,13 @@ channel_targets:
 cxx_compiler:
 - gxx
 cxx_compiler_version:
-- '14'
+- '15'
 docker_image:
-- quay.io/condaforge/linux-anvil-x86_64:alma9
+- quay.io/condaforge/linux-anvil-aarch64:alma10
 fortran_compiler:
 - gfortran
 fortran_compiler_version:
-- '14'
+- '15'
 hepmc3:
 - '3.3'
 lhapdf:
@@ -27,11 +27,13 @@ pin_run_as_build:
     min_pin: x.x
     max_pin: x.x
 python:
-- 3.14.* *_cp314
+- 3.12.* *_cpython
 sqlite:
 - '3'
 target_platform:
-- linux-64
+- linux-aarch64
 zip_keys:
 - - cxx_compiler_version
   - fortran_compiler_version
+- - python
+  - channel_sources
