@@ -24,6 +24,14 @@ source:
     # Strip NULs where such paths are read and used.
     - remove-null-characters-for-prefix-replacement.patch
     - strip-null-bytes-in-Library_Loader.patch
+    # The vendored yaml-cpp uses uint16_t/uint32_t without including <cstdint>,
+    # which GCC 15 no longer provides transitively. Upstream released the fix in
+    # v3.0.2; drop this patch when the feedstock moves off v3.0.0.
+    - add-missing-cstdint-include.patch
+    # SWIG 4.5 dropped the Python 2 C-API compatibility shims, exposing Sherpa's
+    # use of PyString_FromString/PyInt_FromLong in the .i files. Fixed upstream on
+    # master but not in any 3.0.x release, so this patch outlives a version bump.
+    - python3-only-c-api-in-swig-bindings.patch
 
 build:
   number: 3
